@@ -29,8 +29,7 @@ func main() {
 
 		switch choice {
 		case 1:
-			contact := addContact()
-			saveToJson(contact)
+			addContact()
 		case 2:
 			listContacs()
 		case 3:
@@ -72,12 +71,21 @@ func menu() int {
 	return choice
 }
 
-func addContact() Contact {
+func addContact() {
 	input := "static"
 	c := Contact{}
 	//Email
 	fmt.Println("Input the contact's email")
 	fmt.Scanln(&input)
+	mytest := func(c Contact) bool {
+		return c.Email == input
+	}
+	payload, _ := readJson()
+	_, contact := filter(payload, mytest) 
+	if contact.Email != ""{
+		fmt.Println("Email already registered, email should be unique\n")
+		return
+	}
 	c.Email = input
 
 	//Fullname
@@ -89,8 +97,8 @@ func addContact() Contact {
 	fmt.Println("Input the contact's phone number")
 	fmt.Scanln(&input)
 	c.Number = input
-
-	return c
+	saveToJson(c)
+	 
 }
 
 func saveToJson(contact Contact) {
@@ -111,26 +119,70 @@ func saveToJson(contact Contact) {
 	check(err)
 	file.Sync()
 }
+func writeToJson(contacts []Contact){
+	
+}
+func readJson() ([]Contact, error) {
 
-func listContacs() {
 	content, err := os.ReadFile(PATH)
 	if err != nil {
-		fmt.Println("No contacts found yet.")
-		return
+		return nil, err
 	}
 
 	var payload []Contact
 	err = json.Unmarshal(content, &payload)
 	check(err)
-	for i, c := range payload{
-		fmt.Printf("%d. FullName: %s, Email: %s, PhoneNumber: %s\n", i, c.Fullname, c.Email, c.Number)
-	}
-	fmt.Print("\n\n")
+
+	return payload, nil
 }
 
-func removeContact(){
-	var fname string
-	fmt.Print("Input the fullname of the unwanted contact: ")
-	fmt.Scanln(&fname)
+func listContacs() {
+	payload, err := readJson()
+	if err != nil {
+		fmt.Println("No contacts found yet.")
+	} else {
+
+		for i, c := range payload {
+			fmt.Printf("%d. FullName: %s, Email: %s, PhoneNumber: %s\n", i, c.Fullname, c.Email, c.Number)
+		}
+		fmt.Print("\n\n")
+	}
+}
+
+func removeContact() {
+	var Temail string
+	fmt.Print("Input the email of the unwanted contact: ")
+	fmt.Scanln(&Temail)
+	payload, err := readJson()
+	if err != nil {
+		fmt.Println("No contacts found yet.")
+	} else {
+		mytest := func(c Contact) bool {
+			return c.Email == Temail
+		}
+		index, contact := filter(payload, mytest)
+		if contact.Email == ""{
+			fmt.Println("No contact with the provided email was found.")
+			return
+		}
+		payload := remove(payload, index)
+
+		
+	}
 	
+}
+
+func remove(s []Contact, i int) []Contact{
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
+}
+
+func filter(items []Contact, test func(Contact) bool) (index int, contact Contact){
+	for i,c := range items {
+		if test(c) {
+			contact = c
+			index = i
+		}
+	}
+	return index, contact
 }
